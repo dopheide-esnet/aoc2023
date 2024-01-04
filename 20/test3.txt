@@ -1,0 +1,9 @@
+&bb -> rx
+&ct -> bb
+&kp -> bb
+&ks -> bb
+&xc -> bb
+&gt -> pm, xh, gp, nn, bv, ct
+&xd -> kp, bg, ss, sn, mf, qb, fx
+&ms -> br, nl, px, vg, vr, ks, fr
+&zt -> jl, xc, jf, fh

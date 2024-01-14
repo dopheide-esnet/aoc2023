@@ -2,9 +2,11 @@
 
 import copy
 
-testcase = True
+cache = dict()
+
+testcase = False
 if testcase:
-    file = "test2.txt"
+    file = "test.txt"
 else:
     file = "input.txt"
 
@@ -127,77 +129,200 @@ def Poss2(s,springs,c,counts):
     return poss_return
 
 
-def DoBetter(prev,s,springs,c,counts):
+def DoBetter(s,springs,c,counts):
+    ''' Start at the end '''
     options = 0
-    both = False
-    failed = False
-
-    results = 0
-    l_results = 0
-    r_results = 0
+ 
     print("At",s,c)
-    if(springs[s] == "?"):
-        both = True
 
-        # TODO:  Don't bother doing both if this is the last spot
-        # could also throw off count
+    # check if this is a known '.' and just back up?
+    while(springs[s] == '.' and s > 0):
+        s -= 1
 
-    if(springs[s] == "." or both):
-        # There's only one option here, skip
-        if(not both):
-            print("skip solo .")
+    # would the spring fit here.
+    proceed = False
+    must_proceed = False # if any s in range[counts[c]] == #, we HAVE to place a spring here
+    while(not proceed and s-counts[c] >= -1):
+        proceed = True
+        for i in range(counts[c]):
+            # it can't fit here, back up and try again.
+            if(springs[s-i] == '.'):
+                proceed = False
+                s -= 1
+            elif(springs[s-1] == "#"):
+                must_proceed == True
+        if(must_proceed):
+            break
+
+#    if not proceed:
+#        print("Return dead end")
+#        return 
+
+    # Need to check that s+1 isn't a # (must be a space between springs)
+    if(s < len(springs)-1):
+        if(springs[s+1] == "#" and must_proceed):
+            # wha hwa.
+            print("Dead end 3")
+            proceed = False
+#            return 
+    
+        if(springs[s+1] == "#"):
+            proceed=False
+
+    if(proceed):
+        print("Proceed here",s,c)
+        options += 1
+
+    # TODO if this is a '?' we also process s-1, if length and .count() of # and ? are enough.
+    if(springs[s] == '?'):
+        print("We can optionally back up")
+        print("Assuming remaining space would be enough.")
+        available = springs[0:s].count('#') + springs[0:s].count('?')
+        needed = sum(counts[:c+1])
+
+        # This could also include the number of needed spaces between springs.
+        # so..  needed += len(counts[:c+1]-1  ?  but we didn't count available spaces
+
+        # If things break, check here.
+        if(needed > available):
+            print("Dead end 2, also no reason to go backwards")
+            return 0 # ?
         else:
-            print("skip fake .")
-        l_results = DoBetter(".",s+1,springs,c,counts)
-        if(l_results > 0):
-            options += 1
-    if(springs[s] == "#" or both):
-        print("going #")
-        # will the next c fit?
-        num = s+counts[c]
-        if(prev=="#"):
-            print("Failed prev check")
-            failed = True
-        # not enough room
-        #### NUM >= is wrong also
-        if(c < len(counts)-1 and num >= len(springs) and not failed):  #???
-            print("Failed room check")
-            failed = True
-        # there is a divider in the way or a # after it.
-        if(not failed):
-            if(springs[s:num].count(".") > 0):
-                print("Failed . check")
-                failed = True
-        print(len(springs),num)
-        if(not failed):
-            if(c < len(counts)-1 and springs[num] == "#" and not failed):
-                print("Failed next # after check")
-                failed = True
-        if(not failed):
-            print("Need to check if this is the last one and just return??")
-            # if it's the last c and there are no more '#'s left in springs..
-            if(c+1 == len(counts)):
-                if(springs[num:].count("#") > 0):
-                    print("ended too soon")
-                    failed = True
-                else:
-#                    results = 1
-#                    options += 1
-                    print("SUCCESS, just return 1?")
-                    
-                    return 1
-            else:
-                r_results = DoBetter("#",num,springs,c+1,counts)  # ?? this should be just 'num' ?
-                if(r_results > 0 ):
-                    options += 1
+            print("Proceed at s-1 with c",s-1,c)
+            result = DoBetter(s - 1, springs, c, counts)
+            print("Return from s-1 with c",s-1,c)
 
-    print("Returning from",s,c,l_results,r_results,options,"     ",(l_results + r_results) * options)
-    results = l_results + r_results  # ???
-    return (results * options)
+
+    # planned backup for next springs in counts
+    if(c > 0):
+        print("Proceed at s-1 with c-1") 
+        # if we can proceed.. set new s and new c.
+        result = DoBetter(s - counts[c], springs, c - 1, counts)
+
+    # check if we make this a '.', is there still enough previous room for the counts
+    # track via cache?
+
+    return 
+
+
+def DoBetter2(s,springs,c,counts):
+    ''' Start at the front '''
+    global cache
+    options = 0
+ 
+#    print("At",s,c)
+    # TODO:  Check cache
+#    if((s,c) in cache):
+#        print("Cache return",s,c)
+#        return cache[(s,c)]
+
+    if(s == len(springs)):
+#        print("EOL")
+        return 0
+
+    # check if this is a known '.' and just move forward
+    while(springs[s] == '.' and s < len(springs)-1):
+        s += 1
+
+#    if(s == len(springs)):
+#        print("EOL")
+#        return 0
+
+    available = springs[s:].count('#') + springs[s:].count('?')
+    needed = sum(counts[c:])
+    if(needed > available):
+ #       print("No space")
+        return 0
+
+    # check if current space is #, then must_proceed
+    if(springs[s] == "#"):
+#        print("must proceed")
+        if(springs[s:s+counts[c]].count(".") > 0):
+#            print("Ran into a space")
+            return 0
+
+    must_skip=False
+    if(s+counts[c] < len(springs)):
+        if(springs[s+counts[c]] == "#"):
+#            print("Ran into a spring",s,c)
+            # so we can't put it here, but we could skip it.
+            must_skip=True
+#            return 0
+
+    # put it here and proceed down s+counts[c]+1?, c+1
+    # populating cache the whole way
+
+    if(not must_skip):
+        if(c == len(counts)-1):  # last count
+#            print("last count",s,c)
+#            print(s+counts[c],len(springs)-1)
+            
+            if(s + counts[c] < len(springs)-1 and springs[s+counts[c]:].count("#") > 0):
+
+                # there's still a chance?
+                if(springs[s] == '?'):
+                    must_skip = True # ?
+                else:
+                    return 0
+
+            else:
+                # ?.??#????? is not and end
+                if(springs[s:s+counts[c]].count(".") == 0):
+                    options += 1
+#                    print("end here")
+                    # _AN_ end, doesn't mean the only end.  Could still skip
+                must_skip=True
+
+        # Check for space for just this count[c] at s
+        if(springs[s:s+counts[c]].count(".") > 0):
+#            print("Ran into a space here")
+            must_skip=True
+
+
+        if(not must_skip):
+
+            ### THIS IS WHERE WE INCORRECTLY ASSUMED IT GOT PLACED
+            new_s = s+counts[c]+1
+            new_c = c+1
+
+            if((new_s,new_c) in cache):
+#                print("Cache return (2)",new_s,new_c)
+                result = cache[(new_s,new_c)]
+            else:
+                result = DoBetter2(new_s,springs,new_c,counts)
+                cache[(new_s,new_c)] = result
+#                print("save to cache ",new_s,new_c,result)
+            
+            options += result
+
+    # CACHE if result?
+    # TODO  SAVE TO CACHE, no, can't save until we get a return from an 'end'
+    # but can then save all the way back.
+
+
+    if(springs[s] == '?' and s < len(springs)):   # < len(springs) - 1 ?
+#        print("skip")
+        # this is what gives us options += 1 ?
+
+        new_s = s+1
+        new_c = c
+
+        if((new_s,new_c) in cache):
+#            print("Cache return (3)",new_s,new_c)
+            result = cache[(new_s,new_c)]
+        else:
+            result = DoBetter2(new_s,springs,new_c,counts)
+            cache[(new_s,new_c)] = result
+#            print("save to cache (2)",new_s,new_c,result)
+
+        options += result
+
+    # CACHE and save to cache here? if result?
+
+    return options
 
 
 if(__name__ == '__main__'):
-
     try:
         stuff = open(file,"r")
     except FileNotFoundError:
@@ -208,22 +333,99 @@ if(__name__ == '__main__'):
             lines = stuff.read().splitlines()
 
     all_springs = ParseLines(lines)
+#    print(all_springs)
 
-    for (springs,counts) in all_springs:
-        print(springs,counts)
-        count = DoBetter("",0,springs,0,counts)
-        print("Count",count)
+#    i = 1
+#    for (springs,counts) in all_springs:
+#        print(i,springs,counts)
+#        count = DoBetter("",0,springs,0,counts)
+#        print("Count",count)
+#        i += 1
 #        exit()
 
+    total = 0
+    working_on = 1
+    for (springs,counts) in all_springs:
+#        print("Line:",working_on)
 
-    print("Need Part2 multiples")
+        ## Do first part only
+#        check = DoBetter2(0,springs,0,counts)
+
+        # Do Part 2
+        extra = copy.copy(springs)
+        cextra = copy.copy(counts)
+
+        for i in range(4):
+            springs.append("?")
+            springs.extend(extra)
+            counts.extend(cextra)
+
+        check = DoBetter2(0,springs,0,counts)
+
+
+        # clear cache
+        cache = dict()
+        total += check
+        working_on += 1
+
+    print("Total:",total)
     exit()
+
+    if(False):
+        # Shitty partial Part2 attempt below
+        total = 0
+        working_on = 1
+        for (springs,counts) in all_springs:
+            print(working_on)
+            working_on += 1
+
+            osprings = copy.copy(springs)
+            ocounts = copy.copy(counts)
+            oosprings = copy.copy(springs)
+            oocounts = copy.copy(counts)
+
+            ## Do first phase
+            check = Poss2(0,springs,0,counts)
+            for t in range(len(check)):
+                for s in range(len(check[t])):
+                    if(check[t][s] == "?"):
+                        check[t][s] = "."
+            unique_data = [list(x) for x in set(tuple(x) for x in check)]
+            step1 = len(unique_data)
+
+            ## PART 2 NONSENSE
+            extra = copy.copy(osprings)
+            cextra = copy.copy(ocounts)
+
+            for i in range(1):
+                osprings.append("?")
+                osprings.extend(extra)
+                ocounts.extend(cextra)
+
+    #        print("".join(springs),counts)
+
+            check = Poss2(0,osprings,0,ocounts)
+            for t in range(len(check)):
+                for s in range(len(check[t])):
+                    if(check[t][s] == "?"):
+                        check[t][s] = "."
+            unique_data = [list(x) for x in set(tuple(x) for x in check)]
+    
+            step2 = len(unique_data)
+
+
+
+    #        for u in unique_data:
+    #            print("".join(u))
+            total += step1 * (multiplier)**4
+
+        print("Part 1:",total)
+
     # Shitty Part1 below
     total = 0
     working_on = 1
     for (springs,counts) in all_springs:
 #        print(working_on)
-        working_on += 1
         ## PART 2 NONSENSE
 #        extra = copy.copy(springs)
 #        cextra = copy.copy(counts)
@@ -242,6 +444,8 @@ if(__name__ == '__main__'):
 #        print(len(unique_data))
 #        for u in unique_data:
 #            print("".join(u))
+#        print("Line:",working_on,"Result:",len(unique_data))
         total += len(unique_data)
+        working_on += 1
 
     print("Part 1:",total)
